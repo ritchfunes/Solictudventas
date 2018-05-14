@@ -1,0 +1,323 @@
+client server public static str SOLICITUD_PRECIO( str  _account,  str _salestaker, str _dataAreaID , str _detalle )
+{  // inicio del metodo
+
+
+   // declaracion de variables
+
+    PriceDiscRequest EncaPrecio;
+    CUSTTABLE cliente ;
+    NumberSequenceTable secuencia ;
+    smmBusRelTable  relacioncomercial ;
+    PriceDiscRequestTrans DetallePrecio ;
+    transDate  dia ;
+    transDate  pdia ;
+    str 20 pda ;
+    str 20 ruta ;
+    str 20 grupoprecio ;
+    str 20 lineadesc ;
+    ABC ABCd ;
+    int nsolicitud ;
+    str 3 empresa ;
+    str 20 cuenta_cliente ;
+    str 20 acuerdo ;
+    str 20 salestaker ;
+    str 20 smm ;
+
+    ABC pmagente ;
+    price preciominimo ;
+    price preciominimoGerencia ;
+    PriceDiscTable PriceDiscTable;
+     PriceDiscTable PriceDiscTableGerencia;
+    str 20 ACCOUNTRELATIONPMagente ;
+    inventtablemodule module2;
+    /*str 3*/ CurrencyCode     moneda ;
+    ItemRelation ItemRelation       ;
+     str 20 art ;
+     str 20 ACCOUNTRELATIONPMGerencia ;
+     CostPrice costund ;
+     inventtable    inventtable2;
+     List           myListString = new List(Types::String);
+     ListIterator   literator  ;
+
+     price  encTotalCosto ;
+     price encTotalSolictud ;
+     Percent enctotalMargen ;
+    ;
+
+   // inicializar variables
+     dia = today();
+    pdia = 01\01\1900;
+    empresa =  _dataAreaID ;
+    cuenta_cliente = _account ;
+    salestaker = _salestaker ;
+    ACCOUNTRELATIONPMagente = "";
+    ACCOUNTRELATIONPMGerencia = "" ;
+    preciominimo=0;
+    preciominimoGerencia = 0 ;
+
+    encTotalCosto = 0 ;
+    encTotalSolictud = 0 ;
+    enctotalMargen = 0 ;
+    costund = 1000 ;
+   // empresa = "dsr" ;
+   // salestaker = "0079" ;
+   // cuenta_cliente = "003326" ;
+    //   _detalle     = "011127_289" ;
+     //  smm = "011127_289";
+
+
+
+   changeCompany(empresa)
+   {
+
+
+   try
+       {
+ //  empresa = "dsr" ;
+    ttsBegin;
+
+      select firstonly BUSRELACCOUNT from  relacioncomercial
+   where relacioncomercial.dataAreaId == empresa && relacioncomercial.CustAccount == "003326"   /*cuenta_cliente*/ ;
+
+
+   acuerdo = relacioncomercial.BUSRELACCOUNT ;
+
+        select firstonly NEXTREC from secuencia
+    where secuencia.NumberSequence == "Preq"  // es el numero de seucneia para solicitud de precio
+    && secuencia.dataAreaId == empresa ;
+
+    nsolicitud = secuencia.NEXTREC ;
+
+      select firstonly * from cliente
+    where cliente.AccountNum == cuenta_cliente
+    && cliente.dataAreaId == empresa ;
+
+
+    pda = cliente.Dimension[1] ;
+    ruta = cliente.Dimension[2] ;
+    grupoprecio = cliente.PriceGroup ;
+    lineadesc = cliente.LineDisc ;
+    ABCd = cliente.ABCClasificacion ;
+
+    moneda = cliente.Currency ;
+    pmagente = ABCd ;
+
+
+    select forUpdate EncaPrecio;
+
+     //   encaprecio.dataAreaId = "dsr" ; // empresa que solicita la solicitud del precio
+        EncaPrecio.CustAccount = cuenta_cliente ; // cuenta de cliente
+        EncaPrecio.smmBusRelAccount = acuerdo ;  // relacion de negocio
+        EncaPrecio.RequestEmplId = salestaker ; // el vendedor
+        EncaPrecio.AcceptReject = 1 ; // este debe quedar asi
+        EncaPrecio.PriceRequestId = "Preq_1"+int2str(   nsolicitud ) ;  // numero de consecutivo
+        EncaPrecio.Registered = 0 ; // este debe quedar asi
+        EncaPrecio.Listo = 0 ; // este debe quedar asi
+        EncaPrecio.Posted = 0 ; // este debe quedar asi
+        EncaPrecio.TransDate = dia ; // fecha de solicitud del precio
+        EncaPrecio.ToDate = pdia ; // este debe ser vacio
+        EncaPrecio.ApprovalDate = pdia; // esta debe ser vacio
+        EncaPrecio.PriceDiscJournalNum = "" ; // este debe ser vacio
+        EncaPrecio.ApprovalEmplId = "" ;    // empleado que lo aprueba
+        EncaPrecio.Approvaltime = 0 ; // este valor debe quedar en cero
+        EncaPrecio.MarginRequest = 0 ; // margen default
+        EncaPrecio.TotalRequest = 0 ; // total default
+        encaprecio.TotalCost = 0 ; // total costo default
+        encaprecio.MarginApproval = 0 ; // default
+        encaprecio.TotalApproval = 0 ; //default
+        encaprecio.TotalCostGerencia = 0 ; // default
+        encaprecio.MarginApprovalGerencia = 0 ; // default
+
+        encaprecio.CustPriceGroup = grupoprecio ;
+        encaprecio.CustLineDiscCode = lineadesc ;
+        encaprecio.ABC = ABCd ;
+        encaprecio.Dimension[1] =pda ;
+        encaprecio.Dimension[2] =ruta ;
+        EncaPrecio.insert();
+
+
+        // insertar en el detalle de la solicitd de precios
+
+       // se genera una lista con el detalle del pedido
+      myListString = Global::strSplit( _detalle,"|");
+      // se ineractua la lista
+          literator = new ListIterator( myListString);
+
+       while(literator.more())
+           {
+
+        select forUpdate DetallePrecio;
+
+        DetallePrecio.PriceRequestId = "Preq_1"+int2str(   nsolicitud )  ;  //"Preq_130355"; // EncaPrecio.PriceRequestId ;
+        DetallePrecio.PriceRequestType = 0 ; // default
+        DetallePrecio.AmountQty = 1  ; // parametro cantidad minima
+        DetallePrecio.TransDate = dia ;
+         art = literator.value() ;
+        DetallePrecio.ItemId = art ; // parametro articulo
+        literator.next();
+        DetallePrecio.Qty = str2num(literator.value())  ; // parametro volumen
+        literator.next();
+        DetallePrecio.RequestedPrice = str2num(literator.value()) ; // parametro precio solicitado
+        DetallePrecio.ApprovedActualPrice = str2num(literator.value()) ;  // parametro precio solicitado
+        DetallePrecio.ApprovedPrice = str2num(literator.value()) ; // parametro precio solicitado
+        literator.next();
+        DetallePrecio.CompetitorItem = literator.value() ; // parametro item competencia
+        literator.next();
+        DetallePrecio.competitorBrand =  literator.value() ;  // parametros marca competencia
+        literator.next();
+        DetallePrecio.CompetitorActualPrice =  str2num(literator.value()); // parametro precio competencia
+        DetallePrecio.CompetitorPrice =  str2num(literator.value()) ; // parametro precio de competencia
+        literator.next();
+        DetallePrecio.CompetitorCompany = literator.value() ;  // parametro compania competencia
+        literator.next();
+
+        DetallePrecio.ApprovalDate =     pdia ; //  fecha nula
+        DetallePrecio.CustPriceGroup = grupoprecio ; // info de cliente
+        DetallePrecio.CustLineDiscCode = lineadesc ; // info cliente
+         DetallePrecio.ABC = ABCd ; // info cliente
+       //b DetallePrecio.Authorize = 0 ;  // default
+        DetallePrecio.ApprovalEmplId = " " ; // default 0
+        DetallePrecio.LineSegment = 0 ; // default
+        DetallePrecio.SalesAmountReqPrice =  DetallePrecio.Qty * DetallePrecio.ApprovedPrice ; // venta total solicitud
+        DetallePrecio.ActualPrice =  DetallePrecio.SalesPrice * (1- (DetallePrecio.LINEDISCPCT /100) )  ; // precio de cliente con descuento
+
+
+        encTotalSolictud = encTotalSolictud + DetallePrecio.SalesAmountReqPrice ; // total solicitud del encabezado
+
+        module2=inventtablemodule::find(art,ModuleInventPurchSales::sales,true);
+        // metodo para asignar el precio minimo de agente
+        if( pmagente == abc::A)
+        {
+          ACCOUNTRELATIONPMagente = "PR_ModA" ;
+          ACCOUNTRELATIONPMGerencia = "PM_1A";
+        }
+        else if(pmagente == abc::B)
+        {
+          ACCOUNTRELATIONPMagente = "PR_ModB" ;
+           ACCOUNTRELATIONPMGerencia = "PM_1B";
+        }
+        else if(pmagente == abc::C)
+        {
+         ACCOUNTRELATIONPMagente = "PR_ModC" ;
+          ACCOUNTRELATIONPMGerencia = "PM_1C";
+        }
+        else {
+          ACCOUNTRELATIONPMagente = "PR_Mod" ;
+           ACCOUNTRELATIONPMGerencia = "PM_1";
+        }
+
+
+      ItemRelation    = art ;
+
+        inventtable2=inventtable::find(art);
+
+      DetallePrecio.CostPrice = inventtable2.PurchPricewfactorcompany(); // costo unitario
+        DetallePrecio.CostAmount = DetallePrecio.CostPrice    * DetallePrecio.Qty; // costot total fila
+
+      encTotalCosto = encTotalCosto + DetallePrecio.CostAmount ;
+
+        // obtiene el precio de 25 para la gerencia
+        DetallePrecio.PrecioDeta25=Inventtable::find(art).SalesPriceDeta25();
+
+    /// obtienene precio de la gerencia
+     select firstonly AMOUNT FROM PriceDiscTableGerencia
+      where
+             PriceDiscTableGerencia.RELATION == Pricetype::Pricesales // PriceSales
+             && PriceDiscTableGerencia.dataAreaId == empresa
+          && PriceDiscTableGerencia.ITEMCODE == 0 // Table
+          && PriceDiscTableGerencia.ITEMRELATION == art
+          && PriceDiscTableGerencia.ACCOUNTCODE ==  1 // -- GroupId
+          && PriceDiscTableGerencia.ACCOUNTRELATION == ACCOUNTRELATIONPMGerencia
+          && PriceDiscTableGerencia.CURRENCY == moneda
+          && PriceDiscTableGerencia.UNITID == module2.UnitId
+          && PriceDiscTableGerencia.QUANTITYAMOUNT == 1
+          && ( PriceDiscTableGerencia.TODATE == pdia || PriceDiscTableGerencia.TODATE >= dia ) ;
+
+
+        preciominimoGerencia = PriceDiscTableGerencia.AMOUNT ; // precio gerencia
+
+          // cuando el precio no se encuentra se utiliza ese valor
+        if (preciominimoGerencia == 0)
+         {
+           preciominimoGerencia = DetallePrecio.PrecioDeta25 ;
+         }
+
+        DetallePrecio.PrecioGerencia =   preciominimoGerencia ;
+
+
+  // obtiene precio de los agentes
+      select firstonly AMOUNT FROM PRICEDISCTABLE
+      where
+             PRICEDISCTABLE.RELATION == Pricetype::Pricesales // PriceSales
+          && PRICEDISCTABLE.ITEMCODE == 0 // Table
+          && PRICEDISCTABLE.ITEMRELATION == art
+          && PRICEDISCTABLE.ACCOUNTCODE ==  1 // -- GroupId
+          && PRICEDISCTABLE.ACCOUNTRELATION == ACCOUNTRELATIONPMagente
+          && PRICEDISCTABLE.CURRENCY == moneda
+          && PRICEDISCTABLE.UNITID == module2.UnitId
+          && PRICEDISCTABLE.QUANTITYAMOUNT == 1
+          && ( PRICEDISCTABLE.TODATE == pdia || PRICEDISCTABLE.TODATE >= dia ) ;
+
+   preciominimo = PRICEDISCTABLE.AMOUNT ; // precio minimo agentes
+
+      if(preciominimo == 0)
+      {
+        preciominimo = preciominimoGerencia ;
+      }
+
+
+        DetallePrecio.PrecioMinimo =  PrecioMinimo ;
+        if(DetallePrecio.CostPrice != 0)
+        {
+        DetallePrecio.REQUESTEDMARGIN = 100*(DetallePrecio.RequestedPrice-DetallePrecio.CostPrice)/DetallePrecio.CostPrice;
+        DetallePrecio.APPROVEDMARGIN =  100*(DetallePrecio.ApprovedPrice-DetallePrecio.CostPrice)/DetallePrecio.CostPrice;
+        }
+        else {
+          DetallePrecio.REQUESTEDMARGIN = 0 ;
+           DetallePrecio.APPROVEDMARGIN = 0 ;
+        }
+
+        DetallePrecio.insert() ;
+
+
+   }
+
+    ttsCommit;
+
+     enctotalMargen = 100* (   (encTotalSolictud - encTotalCosto)/ encTotalCosto )  ;
+  //   enctotalMargen =  enctotalMargen   / encTotalCosto ;
+   //  enctotalMargen
+//    select sum SalesAmountReqPrice from DetallePrecio
+  //  where DetallePrecio.PriceRequestId ==  "Preq_1"+int2str(   nsolicitud )  ;
+
+
+
+  update_recordset  EncaPrecio
+  setting
+   TOTALCOST = encTotalCosto ,
+   TOTALREQUEST = encTotalSolictud,
+   MARGINREQUEST = enctotalMargen
+  where EncaPrecio.PriceRequestId ==  "Preq_1"+int2str(   nsolicitud )  ;
+
+
+   // actualiza el numero de consecutivo por la empresa
+  update_recordset secuencia setting NEXTREC = secuencia.NEXTREC + 1
+  where secuencia.NumberSequence == "preq" && secuencia.dataAreaId == empresa ;
+
+      } // ciere del  try
+       catch (Exception::Error)
+       {
+
+        ttsabort;
+
+      }
+
+//  return "inserto" ;
+   }
+
+
+return "inserto" ;
+
+
+
+} // fin del metodo

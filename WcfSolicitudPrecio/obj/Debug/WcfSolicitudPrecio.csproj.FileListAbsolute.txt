@@ -1,0 +1,6 @@
+C:\Users\jleonhardes\Documents\Visual Studio 2012\Projects\WcfSolicitudPrecio\WcfSolicitudPrecio\bin\WcfSolicitudPrecio.dll
+C:\Users\jleonhardes\Documents\Visual Studio 2012\Projects\WcfSolicitudPrecio\WcfSolicitudPrecio\bin\WcfSolicitudPrecio.pdb
+C:\Users\jleonhardes\Documents\Visual Studio 2012\Projects\WcfSolicitudPrecio\WcfSolicitudPrecio\bin\Microsoft.Dynamics.BusinessConnectorNet.dll
+C:\Users\jleonhardes\Documents\Visual Studio 2012\Projects\WcfSolicitudPrecio\WcfSolicitudPrecio\obj\Debug\WcfSolicitudPrecio.dll
+C:\Users\jleonhardes\Documents\Visual Studio 2012\Projects\WcfSolicitudPrecio\WcfSolicitudPrecio\obj\Debug\WcfSolicitudPrecio.pdb
+C:\Users\jleonhardes\Documents\Visual Studio 2012\Projects\WcfSolicitudPrecio\WcfSolicitudPrecio\obj\Debug\WcfSolicitudPrecio.csprojResolveAssemblyReference.cache
